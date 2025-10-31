@@ -1,4 +1,5 @@
 export type Note = {
+  created_at: string | number | Date
   id: string
   title: string
   date: string 

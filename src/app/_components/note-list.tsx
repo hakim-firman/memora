@@ -35,12 +35,18 @@ export default function NoteList({
                   "ring-2 ring-sidebar-primary bg-sidebar-primary/10 border-sidebar-primary"
               )}
             >
-              <div className="text-xs text-muted-foreground">
-                {new Date(n.date).toLocaleDateString()}
+               <div className="text-xs text-muted-foreground">
+                {n.created_at
+                  ? new Date(n.created_at).toLocaleDateString()
+                  : "No date"}
               </div>
-              <div className="mt-1 font-medium truncate">{n.title || "Untitled"}</div>
+
+              <div className="mt-1 font-medium truncate">
+                {n.title || "Untitled"}
+              </div>
+
               <div className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                {n.excerpt || "Start writing..."}
+                {n.content?.trim() || "Start writing..."}
               </div>
             </button>
           ))

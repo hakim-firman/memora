@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { folders } from "@/lib/data/mocks";
 
 export type Note = {
+  created_at: string | number | Date;
   id: string;
   title: string;
   date: string;
