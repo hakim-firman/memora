@@ -21,7 +21,7 @@ export default function Sidebar({ folders, selectedFolder, onSelectFolder, onNew
     <div className="flex h-full w-full flex-col  ">
       <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold">Nowted</span>
+          <span className="text-lg font-semibold">Noted</span>
           <span className="sr-only">Notes app</span>
         </div>
         <div>
