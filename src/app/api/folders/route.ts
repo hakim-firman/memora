@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
 
 export async function GET() {
-  const cookieStore = await cookies()
 
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient();
+
   const { data: folders, error } = await supabase.from("folders").select()
   .then(data => {
     console.log('folders')

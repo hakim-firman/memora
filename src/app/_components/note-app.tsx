@@ -5,7 +5,6 @@ import Sidebar from "./sidebar";
 import NoteList from "./note-list";
 import { useEffect, useState } from "react";
 
-// Tipe Note
 export type Note = {
   date: string | number | readonly string[] | undefined;
   id: string;
@@ -73,16 +72,39 @@ export default function NoteApp() {
   }, []);
 
   function handleCreateNote() {
-    const id = crypto.randomUUID();
     const newNote: Note = {
-      id,
+      id: crypto.randomUUID(),
       title: "Untitled",
       content: "",
-      excerpt: "Start writing...",
       folder: selectedFolderId,
     };
-    setNotes((prev) => [newNote, ...prev]);
-    setSelectedId(id);
+
+    const saveToApi = async () => {
+      try {
+        const res = await fetch("/api/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: newNote.title,
+            content: newNote.content,
+            folder: newNote.folder,
+          }),
+        });
+
+        if (!res.ok) throw new Error("Failed to create note");
+
+        const data = await res.json();
+        console.log("Created note:", data.data);
+
+        setNotes((prev) => [data.data, ...prev]);
+        setSelectedId(data.data.id);
+      } catch (err) {
+        console.error("Error creating note:", err);
+        alert("Failed to create note");
+      }
+    };
+
+    saveToApi();
   }
 
   const filteredNotes = notes.filter((note) =>
@@ -116,7 +138,15 @@ export default function NoteApp() {
 
         {/* Editor */}
         <section className="flex-1 min-w-0">
-          <NoteEditor note={selectedNote} />
+          <NoteEditor
+            note={selectedNote}
+            onSave={(updatedNote) => {
+              setNotes((prev) =>
+                prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+              );
+            }}
+            folders={folders} 
+          />
         </section>
       </main>
     </div>
