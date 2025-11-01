@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 // Tipe Note
 export type Note = {
+  date: string | number | readonly string[] | undefined;
   id: string;
   title: string;
   content?: string;
