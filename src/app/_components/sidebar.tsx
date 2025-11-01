@@ -123,7 +123,7 @@ export default function Sidebar({
           <li>
             <button className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-sidebar-accent/60">
               <Trash2 className="h-4 w-4" />
-              <span className="text-sRecentsm">Trash</span>
+              <span className="text-sm">Trash</span>
             </button>
           </li>
           <li>
