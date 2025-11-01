@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Note } from "@/lib/data/types";
+import { Note } from "@/lib/data/types"; 
 import { cn } from "@/lib/utils";
 import {
   Archive,
@@ -16,9 +16,9 @@ import {
 import ProfileMenu from "./profile-menu";
 
 type Props = {
-  folders: string[];
-  selectedFolder: string;
-  onSelectFolder: (name: string) => void;
+  folders: { id: number; name: string }[];
+  selectedFolderId: number | null; 
+  onSelectFolder: (id: number | null) => void; 
   onNewNote: () => void;
   recents: Note[];
   selectedId: string | null;
@@ -26,14 +26,14 @@ type Props = {
 
 export default function Sidebar({
   folders,
-  selectedFolder,
+  selectedFolderId,
   onSelectFolder,
   onNewNote,
   recents,
   selectedId,
 }: Props) {
   return (
-    <div className="flex h-full w-full flex-col  ">
+    <div className="flex h-full w-full flex-col">
       <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold">Memora</span>
@@ -44,7 +44,10 @@ export default function Sidebar({
         </div>
       </div>
       <div className="p-4">
-        <Button className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:opacity-90">
+        <Button
+          onClick={onNewNote}
+          className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:opacity-90"
+        >
           <FilePlus2 className="mr-2 h-4 w-4" />
           New Note
         </Button>
@@ -68,6 +71,7 @@ export default function Sidebar({
           {recents.map((n) => (
             <li key={n.id}>
               <button
+                onClick={() => onSelectFolder(null)}
                 className={cn(
                   "w-full text-left px-2.5 py-2 rounded-md hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2",
                   selectedId === n.id &&
@@ -92,18 +96,32 @@ export default function Sidebar({
           Folders
         </div>
         <ul className="px-2 space-y-1">
-          {folders.map((name) => (
-            <li key={name}>
+          {/* All Notes */}
+          <li key="all-notes">
+            <button
+              onClick={() => onSelectFolder(null)} // null = All Notes
+              className={cn(
+                "w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-sidebar-accent/60",
+                selectedFolderId === null &&
+                  "bg-sidebar-primary/20 border border-sidebar-primary"
+              )}
+            >
+              <Folder className="h-4 w-4" />
+              <span className="text-sm">All Notes</span>
+            </button>
+          </li>
+          {folders.map((folder) => (
+            <li key={folder.id}> 
               <button
-                onClick={() => onSelectFolder(name)}
+                onClick={() => onSelectFolder(folder.id)}
                 className={cn(
                   "w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-sidebar-accent/60",
-                  selectedFolder === name &&
+                  selectedFolderId === folder.id &&
                     "bg-sidebar-primary/20 border border-sidebar-primary"
                 )}
               >
                 <Folder className="h-4 w-4" />
-                <span className="text-sm">{name}</span>
+                <span className="text-sm">{folder.name}</span>
               </button>
             </li>
           ))}
