@@ -1,40 +1,57 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignupForm() {
-  const router = useRouter()
-  const [loading, setLoading] = React.useState(false)
+  const router = useRouter();
+  const [loading, setLoading] = React.useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
+
     try {
-      const form = e.currentTarget
-      const formData = new FormData(form)
-      const email = String(formData.get("email") || "").trim()
-      const password = String(formData.get("password") || "").trim()
+      const form = e.currentTarget;
+      const formData = new FormData(form);
+      const email = String(formData.get("email") || "").trim();
+      const password = String(formData.get("password") || "").trim();
 
-      const supabase = createClient()
-      const { error } = await supabase.auth.signUp({ email, password })
+      if (!email || !password) {
+        toast.error("Email and password are required.");
+        return;
+      }
 
-      if (error) throw error
+      const supabase = createClient();
 
-      toast.success("Account created successfully! Please check your email to verify your account.")
-      router.push("/login")
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      toast.success(
+        "Account created! Please check your email to confirm before logging in."
+      );
+
+      // Redirect to login page after signup
+      router.push("/signin");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "An error occurred")
-      console.error(error)
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -70,7 +87,7 @@ export default function SignupForm() {
             <Label htmlFor="terms" className="text-sm text-muted-foreground">
               I agree to the{" "}
               <a
-                href="#"
+                href="/terms"
                 className="text-primary underline underline-offset-4 hover:no-underline"
               >
                 Terms & Conditions
@@ -94,5 +111,5 @@ export default function SignupForm() {
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }
