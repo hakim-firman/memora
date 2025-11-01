@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 
 export async function GET() {
-  // ✅ perbaikan di sini
   const cookieStore = await cookies()
 
   const supabase = createClient(cookieStore)

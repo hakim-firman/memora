@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { folders } from "@/lib/data/mocks";
 
 export type Note = {
+  created_at: string | number | Date;
   id: string;
   title: string;
   date: string;
@@ -92,7 +93,15 @@ export default function NoteApp() {
       </aside>
       <main className="flex flex-1">
         <section className="w-96 max-w-sm border-r border-border bg-card text-card-foreground hidden sm:flex flex-col">
-          <NoteList />
+          <NoteList
+            notes={notes.filter((note) =>
+              selectedFolder === "All Notes"
+                ? true
+                : note.folder === selectedFolder
+            )}
+            selectedId={selectedId}
+            onSelectNote={setSelectedId}
+          />
         </section>
         <section className="flex-1 min-w-0">
           <NoteEditor />
