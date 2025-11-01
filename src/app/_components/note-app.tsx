@@ -1,18 +1,18 @@
 "use client";
+
 import NoteEditor from "./note-editor";
 import Sidebar from "./sidebar";
 import NoteList from "./note-list";
 import { useEffect, useState } from "react";
-import { folders } from "@/lib/data/mocks";
 
 export type Note = {
-  created_at: string | number | Date;
+  created_at?: string | number | Date;
   id: string;
   title: string;
-  date: string;
-  folder: string;
-  excerpt: string;
-  content: string;
+  date?: string;
+  folder?: string;
+  excerpt?: string;
+  content?: string;
 };
 
 const foldersSeed = [
@@ -31,36 +31,41 @@ export default function NoteApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/notes")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch notes");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("notes data");
-        console.log(data);
-        setNotes(data.data);
-      });
+    const fetchNotes = async () => {
+      try {
+        const res = await fetch("/api/notes");
+        if (!res.ok) throw new Error("Failed to fetch notes");
+        const data = await res.json();
 
-    fetch("/api/folders")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch folders");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("folders data");
-        const folderNames = (data.data || []).map((folder: any) => folder.name);
+        console.log("notes data:", data);
+        setNotes(Array.isArray(data.data) ? data.data : []);
+      } catch (err) {
+        console.error("Error loading notes:", err);
+        setNotes([]);
+      }
+    };
+
+    const fetchFolders = async () => {
+      try {
+        const res = await fetch("/api/folders");
+        if (!res.ok) throw new Error("Failed to fetch folders");
+        const data = await res.json();
+
+        console.log("folders data:", data);
+        const folderNames = (data.data || []).map((f: any) => f.name);
         setFolders(folderNames);
-        console.log(data);
-      });
+      } catch (err) {
+        console.error("Error loading folders:", err);
+        setFolders([]);
+      }
+    };
+
+    fetchNotes();
+    fetchFolders();
   }, []);
 
   useEffect(() => {
-    console.log(notes);
+    console.log("Current notes state:", notes);
   }, [notes]);
 
   function handleCreateNote() {
@@ -80,29 +85,39 @@ export default function NoteApp() {
   }
 
   return (
-    <div className="h-screen w-full flex bg-red text-foreground">
+    <div className="h-screen w-full flex text-foreground">
+      {/* Sidebar kiri */}
       <aside className="hidden md:flex md:w-72 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         <Sidebar
           folders={["All Notes", ...folders]}
           selectedFolder={selectedFolder}
           onSelectFolder={setSelectedFolder}
           onNewNote={handleCreateNote}
-          recents={notes.slice(0, 5)}
+          recents={Array.isArray(notes) ? notes.slice(0, 5) : []}
           selectedId={selectedId}
         />
       </aside>
+
+      {/* Bagian utama */}
       <main className="flex flex-1">
+        {/* List catatan */}
         <section className="w-96 max-w-sm border-r border-border bg-card text-card-foreground hidden sm:flex flex-col">
           <NoteList
-            notes={notes.filter((note) =>
-              selectedFolder === "All Notes"
-                ? true
-                : note.folder === selectedFolder
-            )}
+            notes={
+              Array.isArray(notes)
+                ? notes.filter((note) =>
+                    selectedFolder === "All Notes"
+                      ? true
+                      : note.folder === selectedFolder
+                  )
+                : []
+            }
             selectedId={selectedId}
             onSelectNote={setSelectedId}
           />
         </section>
+
+        {/* Editor */}
         <section className="flex-1 min-w-0">
           <NoteEditor />
         </section>
