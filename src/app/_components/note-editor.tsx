@@ -2,18 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Suspense, lazy } from "react";
+import dynamic from "next/dynamic";
 import {
-  Bold,
   CalendarDays,
   Folder,
-  ImageIcon,
-  Italic,
-  Link2,
-  List,
   MoreVertical,
-  Underline,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Note } from "./note-app";
@@ -21,14 +15,14 @@ import { Note } from "./note-app";
 type Props = {
   note?: Note;
   onChange?: (note: Note) => void;
-  onSave?: (note: Note) => void; 
-  folders?: { id: number; name: string }[]; 
+  onSave?: (note: Note) => void;
+  folders?: { id: number; name: string }[];
 };
 
+const DynamicTipTapEditor = lazy(() => import("./tiptap-editor"));
+
 export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
-  const [local, setLocal] = useState<Note | null>(
-    note ? { ...note } : null
-  );
+  const [local, setLocal] = useState<Note | null>(note ? { ...note } : null);
 
   if (note && local?.id !== note.id) {
     setLocal({ ...note });
@@ -40,8 +34,15 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
     if (!local) return;
     const next = { ...local, [key]: value };
     setLocal(next);
-    onChange?.(next); 
+    onChange?.(next);
   }
+
+  const handleContentChange = (html: string) => {
+  if (!local) return;
+  const next = { ...local, content: html };
+  setLocal(next);
+  onChange?.(next); 
+};
 
   const handleSave = async () => {
     if (!local) return;
@@ -56,7 +57,7 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
           body: JSON.stringify({
             title: local.title,
             content: local.content,
-            folder: local.folder || null, 
+            folder: local.folder || null,
           }),
         });
       } else {
@@ -108,7 +109,10 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
                 className="bg-transparent text-2xl md:text-3xl font-semibold border-none focus-visible:ring-0 px-0"
                 aria-label="Note title"
               />
-              <button aria-label="More options" className="p-2 rounded-md hover:bg-accent/50">
+              <button
+                aria-label="More options"
+                className="p-2 rounded-md hover:bg-accent/50"
+              >
                 <MoreVertical className="h-5 w-5" />
               </button>
             </div>
@@ -120,7 +124,11 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
                 <span className="text-muted-foreground">Date</span>
                 <input
                   type="date"
-                  value={local.created_at ? new Date(local.created_at).toISOString().split('T')[0] : ''}
+                  value={
+                    local.created_at
+                      ? new Date(local.created_at).toISOString().split("T")[0]
+                      : ""
+                  }
                   onChange={(e) => update("created_at", e.target.value)}
                   className="ml-2 bg-secondary border border-border rounded-md px-2 py-1"
                   aria-label="Select date"
@@ -131,7 +139,12 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
                 <span className="text-muted-foreground">Folder</span>
                 <select
                   value={local.folder || ""}
-                  onChange={(e) => update("folder", e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    update(
+                      "folder",
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
                   className="ml-2 bg-secondary border border-border rounded-md px-2 py-1"
                   aria-label="Select folder"
                 >
@@ -144,62 +157,21 @@ export default function NoteEditor({ note, onChange, onSave, folders }: Props) {
               </div>
             </div>
 
-            {/* Toolbar */}
-            <div className="mt-4 flex items-center gap-1 border-t border-border pt-4">
-              <ToolbarButton icon={<Bold className="h-4 w-4" />} label="Bold" disabled={disabled} />
-              <ToolbarButton icon={<Italic className="h-4 w-4" />} label="Italic" disabled={disabled} />
-              <ToolbarButton icon={<Underline className="h-4 w-4" />} label="Underline" disabled={disabled} />
-              <ToolbarButton icon={<Link2 className="h-4 w-4" />} label="Link" disabled={disabled} />
-              <ToolbarButton icon={<ImageIcon className="h-4 w-4" />} label="Image" disabled={disabled} />
-              <ToolbarButton icon={<List className="h-4 w-4" />} label="List" disabled={disabled} />
-
-              {/* Tombol Save */}
-              <div className="ml-auto">
-                <Button onClick={handleSave} disabled={disabled}>
-                  Save
-                </Button>
-              </div>
-            </div>
+            
           </div>
 
           {/* Content */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-            <Textarea
-              value={local.content || ""}
-              onChange={(e) => update("content", e.target.value)}
-              className="min-h-[60vh] w-full bg-transparent border-none focus-visible:ring-0 text-base leading-relaxed"
-              placeholder="Start writing..."
-              aria-label="Note content"
-            />
+            <Suspense fallback={<div className="p-4 text-center text-muted-foreground">Loading editor...</div>}>
+              <DynamicTipTapEditor
+                content={local.content || ""} 
+                onUpdate={handleContentChange} 
+                onSave={handleSave}
+              />
+            </Suspense>
           </div>
         </>
       )}
     </div>
-  );
-}
-
-function ToolbarButton({
-  icon,
-  label,
-  disabled,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  disabled?: boolean;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      disabled={disabled}
-      aria-label={label}
-      className={cn(
-        "h-8 w-8 text-foreground",
-        "hover:bg-sidebar-primary/20 hover:text-sidebar-primary-foreground"
-      )}
-    >
-      {icon}
-    </Button>
   );
 }
