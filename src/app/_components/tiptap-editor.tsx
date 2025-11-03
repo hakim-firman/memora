@@ -1,4 +1,3 @@
-// src/app/_components/tiptap-editor.tsx
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -28,7 +27,6 @@ export default function TipTapEditorWrapper({ content, onUpdate, onSave }: Props
     ],
     content: content, // Initial content
     onUpdate: ({ editor }) => {
-      // Panggil onUpdate dari parent ketika konten berubah
       onUpdate(editor.getHTML());
     },
     immediatelyRender: false,
@@ -40,7 +38,6 @@ export default function TipTapEditorWrapper({ content, onUpdate, onSave }: Props
     },
   });
 
-  // Perbarui konten editor jika props content berubah (misal saat ganti note)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
       editor.commands.setContent(content, false); // false = jangan panggil onUpdate
@@ -155,13 +152,11 @@ export default function TipTapEditorWrapper({ content, onUpdate, onSave }: Props
           </Button>
         </div>
 
-        {/* Tombol Save memanggil fungsi onSave dari props */}
         <Button onClick={onSave} variant="default"> 
           Save
         </Button>
       </div>
 
-      {/* Editor Content */}
       <div className="flex-1 overflow-y-auto">
         <EditorContent editor={editor} />
       </div>

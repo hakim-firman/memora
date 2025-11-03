@@ -3,7 +3,7 @@
 import NoteEditor from "./note-editor";
 import Sidebar from "./sidebar";
 import NoteList from "./note-list";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 export type Note = {
   date: string | number | readonly string[] | undefined;
@@ -71,12 +71,35 @@ export default function NoteApp() {
     fetchFolders();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this note?")) return;
+    try {
+      const res = await fetch(`/api/notes?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(`Failed to delete note: ${res.status}`);
+
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+
+      if (selectedId === id) {
+        setSelectedId(null);
+      }
+
+      alert("Note deleted successfully");
+    } catch (err) {
+      console.error("Error deleting note:", err);
+      alert("Failed to delete note");
+    }
+  };
+
   function handleCreateNote() {
     const newNote: Note = {
       id: crypto.randomUUID(),
       title: "Untitled",
       content: "",
       folder: selectedFolderId,
+      date: undefined,
     };
 
     const saveToApi = async () => {
@@ -111,7 +134,10 @@ export default function NoteApp() {
     selectedFolderId === null ? true : note.folder === selectedFolderId
   );
 
-  const selectedNote = notes.find((n) => n.id === selectedId) || null;
+  const selectedNote = useMemo(() => {
+    if (selectedId === null) return null;
+    return notes.find((n) => n.id === selectedId);
+  }, [selectedId, notes]);
 
   return (
     <div className="h-screen w-full flex text-foreground">
@@ -139,13 +165,15 @@ export default function NoteApp() {
         {/* Editor */}
         <section className="flex-1 min-w-0">
           <NoteEditor
+            key={selectedNote?.id || "empty"}
             note={selectedNote}
             onSave={(updatedNote) => {
               setNotes((prev) =>
                 prev.map((n) => (n.id === updatedNote.id ? updatedNote : n))
               );
             }}
-            folders={folders} 
+            folders={folders}
+            onDelete={handleDelete}
           />
         </section>
       </main>

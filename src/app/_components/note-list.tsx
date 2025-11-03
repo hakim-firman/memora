@@ -1,7 +1,7 @@
 "use client";
 
 import { Note } from "./note-app";
-import { cn } from "@/lib/utils"; 
+import { cn, stripHtml } from "@/lib/utils"; 
 
 export default function NoteList({
   notes,
@@ -46,7 +46,7 @@ export default function NoteList({
               </div>
 
               <div className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                {n.content?.trim() || "Start writing..."}
+                {stripHtml(n.excerpt || n.content || "")} 
               </div>
             </button>
           ))

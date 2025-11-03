@@ -64,11 +64,11 @@ export async function POST(request: Request) {
           title,
           content: content || "",
           created_by: user.id,
-          folder: folder || null, 
+          folder: folder || null,
         },
       ])
       .select()
-      .single(); 
+      .single();
 
     if (error) {
       console.error("Error inserting note:", error);
@@ -118,10 +118,7 @@ export async function PUT(request: Request) {
     const { title, content, folder } = body;
 
     if (!title) {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -138,15 +135,62 @@ export async function PUT(request: Request) {
 
     if (error) {
       console.error("Error updating note:", error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
       message: "Note updated successfully",
       data,
+      status: 200,
+    });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json(
+      { message: "Unauthorized", status: 401 },
+      { status: 401 }
+    );
+  }
+  
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Note ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("notes")
+      .delete()
+      .eq("id", id)
+      .eq("created_by", user.id);
+
+    if (error) {
+      console.error("Error deleting note:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      message: "Note deleted successfully",
       status: 200,
     });
   } catch (err) {
