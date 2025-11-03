@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import * as React from "react";
+import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,36 +10,57 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ProfileMenu() {
-  const [user, setUser] = React.useState<string | null>(null)
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const supabase = createClient();
 
-  // Sinkronisasi dengan localStorage
   React.useEffect(() => {
-    const read = () => {
+    async function fetchUser() {
       try {
-        const raw = window.localStorage.getItem("user")
-        setUser(raw)
-      } catch {
-        setUser(null)
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) throw error;
+        setUserEmail(user?.email ?? null);
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+        setUserEmail(null);
       }
     }
-    read()
-    const onStorage = () => read()
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
-  }, [])
 
-  function onLogout() {
+    fetchUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("🔄 Auth state changed:", _event, session);
+      setUserEmail(session?.user?.email ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  async function onLogout() {
     try {
-      window.localStorage.removeItem("user")
-    } catch {}
+      await supabase.auth.signOut();
+      setUserEmail(null);
+    } catch (err) {
+      console.error("Error logging out:", err);
+    }
   }
 
-  const label = user ?? "Guest"
-  const initials = user?.trim()?.slice(0, 2).toUpperCase() || "GU"
+  const label = userEmail ?? "Guest";
+  const initials = userEmail
+    ? userEmail.slice(0, 2).toUpperCase()
+    : "GU";
 
   return (
     <DropdownMenu>
@@ -61,24 +82,21 @@ export default function ProfileMenu() {
 
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuLabel className="text-xs">
-          {user ? "Signed in" : "Not signed in"}
+          {userEmail ? "Signed in" : "Not signed in"}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {user ? (
+        {userEmail ? (
           <>
-            {/* Navigasi menggunakan Link */}
             <DropdownMenuItem asChild>
               <Link href="/">My Notes</Link>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              asChild
-              className="text-red-500 focus:text-red-600"
+              onClick={onLogout}
+              className="text-red-500 focus:text-red-600 cursor-pointer"
             >
-              <Link href="/signin" onClick={onLogout}>
-                Logout
-              </Link>
+              Logout
             </DropdownMenuItem>
           </>
         ) : (
@@ -88,5 +106,5 @@ export default function ProfileMenu() {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

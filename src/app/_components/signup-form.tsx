@@ -31,22 +31,27 @@ export default function SignupForm() {
 
       const supabase = createClient();
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Buat akun baru
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
       });
-
       if (signUpError) throw signUpError;
 
-      toast.success(
-        "Account created! Please check your email to confirm before logging in."
-      );
+      if (!data.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+      }
 
-      // Redirect to login page after signup
-      router.push("/signin");
+      await supabase.auth.refreshSession();
+
+      window.dispatchEvent(new Event("supabase-auth-update"));
+
+      toast.success("Account created! Redirecting to Notes...");
+      router.push("/");
     } catch (error: unknown) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "An error occurred");
