@@ -4,29 +4,22 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function GET() {
   const supabase = await createClient();
+  try {
+    const { data, error } = await supabase.from("folders").select("*");
 
-  const { data: folders, error } = await supabase
-    .from("folders")
-    .select()
-    .then((data) => {
-      console.log("folders");
-      console.log(data);
-      return data;
-    })
-    .catch((error: { message: any }) => {
+    if (error) {
       console.error("error", error);
-      return NextResponse.json({ message: error.message, status: 500 });
-    });
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
 
-  if (error) {
-    return NextResponse.json({ message: error.message, status: 500 });
+    return NextResponse.json({ data });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({
-    message: "Folders fetched successfully",
-    data: folders,
-    status: 200,
-  });
 }
 
 export async function POST(request: Request) {
@@ -36,13 +29,15 @@ export async function POST(request: Request) {
     {
       cookies: {
         getAll() {
-          return request.headers
-            .get("cookie")
-            ?.split(";")
-            .map((cookie) => {
-              const [name, ...rest] = cookie.trim().split("=");
-              return { name, value: rest.join("=") };
-            }) || [];
+          return (
+            request.headers
+              .get("cookie")
+              ?.split(";")
+              .map((cookie) => {
+                const [name, ...rest] = cookie.trim().split("=");
+                return { name, value: rest.join("=") };
+              }) || []
+          );
         },
         setAll() {},
       },
@@ -89,7 +84,10 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     console.error("Unexpected error:", err);
     return NextResponse.json(
-      { message: (err as { message: string }).message || "Internal Server Error" },
+      {
+        message:
+          (err as { message: string }).message || "Internal Server Error",
+      },
       { status: 500 }
     );
   }
