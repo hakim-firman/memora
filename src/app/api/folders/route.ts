@@ -87,10 +87,10 @@ export async function POST(request: Request) {
       data,
       status: 201,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error:", err);
     return NextResponse.json(
-      { message: err.message || "Internal Server Error" },
+      { message: (err as { message: string }).message || "Internal Server Error" },
       { status: 500 }
     );
   }

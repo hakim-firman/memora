@@ -101,10 +101,10 @@ export default function NoteEditor({
 
       const data = await res.json();
       onSave?.(data.data);
-      alert("✅ Note saved successfully!");
+      alert("Note saved successfully!");
     } catch (err) {
       console.error("Error saving note:", err);
-      alert("❌ Failed to save note");
+      alert("Failed to save note");
     }
   };
 
@@ -132,10 +132,9 @@ export default function NoteEditor({
     setIsDialogOpen(false);
     setNewFolderName("");
     alert("Folder created successfully!");
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error creating folder:", err);
-    alert(err.message || "Something went wrong");
-  }
+    alert("Failed to create folder");}
 };
 
 

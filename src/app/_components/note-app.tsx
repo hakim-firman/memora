@@ -5,6 +5,7 @@ import Sidebar from "./sidebar";
 import NoteList from "./note-list";
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 export type Note = {
   date: string | number | readonly string[] | undefined;
@@ -25,7 +26,7 @@ export type Folder = {
 export default function NoteApp() {
   const supabase = createClient();
 
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -67,7 +68,7 @@ export default function NoteApp() {
         const res = await fetch("/api/notes");
         if (!res.ok) throw new Error("Failed to fetch notes");
         const data = await res.json();
-        const noteList: Note[] = (data.data || []).map((n: any) => ({
+        const noteList: Note[] = (data.data || []).map((n: { folder: null; }) => ({
           ...n,
           folder: n.folder !== null ? Number(n.folder) : null,
         }));
@@ -88,7 +89,7 @@ export default function NoteApp() {
         const res = await fetch("/api/folders");
         if (!res.ok) throw new Error("Failed to fetch folders");
         const data = await res.json();
-        const folderList: Folder[] = (data.data || []).map((f: any) => ({
+        const folderList: Folder[] = (data.data || []).map((f: { id: any; name: any; }) => ({
           id: Number(f.id),
           name: f.name,
         }));
@@ -107,7 +108,6 @@ export default function NoteApp() {
     if (!confirm("Are you sure you want to delete this note?")) return;
 
     if (!session) {
-      // Guest mode: hapus dari localStorage
       const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
       const updated = guestNotes.filter((n: Note) => n.id !== id);
       localStorage.setItem("guestNotes", JSON.stringify(updated));
