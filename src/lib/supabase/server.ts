@@ -9,20 +9,18 @@ export const createClient = () => {
 
   return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
+      async get(name) {
+        return (await cookieStore).get(name)?.value;
       },
       set(name, value, options) {
         try {
           cookieStore.set({ name, value, ...options });
-        } catch {
-        }
+        } catch {}
       },
       remove(name, options) {
         try {
           cookieStore.set({ name, value: "", ...options });
-        } catch {
-        }
+        } catch {}
       },
     },
   });

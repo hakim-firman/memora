@@ -40,7 +40,7 @@ export default function TipTapEditorWrapper({ content, onUpdate, onSave }: Props
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false); // false = jangan panggil onUpdate
+      editor.commands.setContent(content, false); 
     }
   }, [content, editor]);
 
