@@ -1,6 +1,6 @@
 "use client";
 
-import { Note } from "./note-app";
+import type { Note } from "@/lib/data/types";
 import { cn, stripHtml } from "@/lib/utils"; 
 
 export default function NoteList({
@@ -11,6 +11,7 @@ export default function NoteList({
   notes: Note[];
   selectedId: string | null;
   onSelectNote: (id: string) => void;
+  getFolderName?: (id: number | null) => string;
 }) {
   return (
     <div className="h-full flex flex-col">

@@ -24,7 +24,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Note } from "./note-app";
 import {
   Select,
   SelectContent,
@@ -33,11 +32,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SelectGroup } from "@radix-ui/react-select";
+import type { Note } from "@/lib/data/types";
 
 const DynamicTipTapEditor = lazy(() => import("./tiptap-editor"));
 
 type Props = {
-  note?: Note;
+  note?: Note | null;
   onChange?: (note: Note) => void;
   onSave?: (note: Note) => void;
   onDelete?: (id: string) => void;

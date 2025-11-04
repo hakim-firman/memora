@@ -6,18 +6,8 @@ import NoteList from "./note-list";
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import type { Note } from "@/lib/data/types";
 
-export type Note = {
-  date: string | number | readonly string[] | undefined;
-  id: string;
-  title: string;
-  content?: string;
-  excerpt?: string;
-  created_at?: string;
-  folder: number | null;
-};
-
-// Tipe Folder
 export type Folder = {
   id: number;
   name: string;
