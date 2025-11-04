@@ -4,6 +4,7 @@ import NoteEditor from "./note-editor";
 import Sidebar from "./sidebar";
 import NoteList from "./note-list";
 import { useEffect, useState, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export type Note = {
   date: string | number | readonly string[] | undefined;
@@ -22,6 +23,9 @@ export type Folder = {
 };
 
 export default function NoteApp() {
+  const supabase = createClient();
+
+  const [session, setSession] = useState<any>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -34,12 +38,35 @@ export default function NoteApp() {
   };
 
   useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    };
+    checkSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
     const fetchNotes = async () => {
+      if (!session) {
+        const localNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+        setNotes(localNotes);
+        return;
+      }
+
       try {
         const res = await fetch("/api/notes");
         if (!res.ok) throw new Error("Failed to fetch notes");
         const data = await res.json();
-        // Konversi folder ke number agar filter bekerja
         const noteList: Note[] = (data.data || []).map((n: any) => ({
           ...n,
           folder: n.folder !== null ? Number(n.folder) : null,
@@ -52,6 +79,11 @@ export default function NoteApp() {
     };
 
     const fetchFolders = async () => {
+      if (!session) {
+        setFolders([{ id: 0, name: "Local" }]); 
+        return;
+      }
+
       try {
         const res = await fetch("/api/folders");
         if (!res.ok) throw new Error("Failed to fetch folders");
@@ -69,30 +101,34 @@ export default function NoteApp() {
 
     fetchNotes();
     fetchFolders();
-  }, []);
+  }, [session]);
 
+  // 🔹 Delete note (guest & login)
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this note?")) return;
+
+    if (!session) {
+      // Guest mode: hapus dari localStorage
+      const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+      const updated = guestNotes.filter((n: Note) => n.id !== id);
+      localStorage.setItem("guestNotes", JSON.stringify(updated));
+      setNotes(updated);
+      setSelectedId(null);
+      return;
+    }
+
     try {
-      const res = await fetch(`/api/notes?id=${id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/notes?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Failed to delete note: ${res.status}`);
-
       setNotes((prev) => prev.filter((n) => n.id !== id));
-
-      if (selectedId === id) {
-        setSelectedId(null);
-      }
-
-      alert("Note deleted successfully");
+      if (selectedId === id) setSelectedId(null);
     } catch (err) {
       console.error("Error deleting note:", err);
       alert("Failed to delete note");
     }
   };
 
+  // 🔹 Create note
   function handleCreateNote() {
     const newNote: Note = {
       id: crypto.randomUUID(),
@@ -102,6 +138,18 @@ export default function NoteApp() {
       date: undefined,
     };
 
+    if (!session) {
+      // Guest mode — simpan lokal
+      const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+      const updated = [newNote, ...guestNotes];
+      localStorage.setItem("guestNotes", JSON.stringify(updated));
+      setNotes(updated);
+      setSelectedId(newNote.id);
+      alert("Note dibuat secara lokal. Login untuk menyimpannya di cloud!");
+      return;
+    }
+
+    // User login — simpan ke server
     const saveToApi = async () => {
       try {
         const res = await fetch("/api/notes", {
@@ -117,8 +165,6 @@ export default function NoteApp() {
         if (!res.ok) throw new Error("Failed to create note");
 
         const data = await res.json();
-        console.log("Created note:", data.data);
-
         setNotes((prev) => [data.data, ...prev]);
         setSelectedId(data.data.id);
       } catch (err) {
@@ -130,6 +176,7 @@ export default function NoteApp() {
     saveToApi();
   }
 
+  // 🔹 Filter dan memoize note
   const filteredNotes = notes.filter((note) =>
     selectedFolderId === null ? true : note.folder === selectedFolderId
   );
@@ -175,6 +222,12 @@ export default function NoteApp() {
             folders={folders}
             onDelete={handleDelete}
           />
+
+          {!session && (
+            <div className="p-3 text-sm text-muted-foreground border-t border-border bg-muted/30 text-center">
+              Kamu sedang dalam mode tamu. Login untuk menyimpan catatan ke cloud.
+            </div>
+          )}
         </section>
       </main>
     </div>

@@ -72,6 +72,7 @@ export default function NoteEditor({
         {
           method: local.id ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             title: local.title,
             content: local.content,
