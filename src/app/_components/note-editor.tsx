@@ -7,6 +7,7 @@ import {
   Trash2,
   CalendarDays,
   FolderIcon,
+  FolderPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -14,6 +15,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Note } from "./note-app";
 import {
   Select,
@@ -32,6 +42,7 @@ type Props = {
   onSave?: (note: Note) => void;
   onDelete?: (id: string) => void;
   folders?: { id: number; name: string }[];
+  onFolderCreated?: (folder: { id: number; name: string }) => void;
 };
 
 export default function NoteEditor({
@@ -39,9 +50,13 @@ export default function NoteEditor({
   onChange,
   onSave,
   onDelete,
-  folders,
+  folders = [],
+  onFolderCreated,
 }: Props) {
   const [local, setLocal] = useState<Note | null>(note ? { ...note } : null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   if (note && local?.id !== note.id) {
     setLocal({ ...note });
@@ -86,16 +101,43 @@ export default function NoteEditor({
 
       const data = await res.json();
       onSave?.(data.data);
-      alert("Note saved successfully!");
+      alert("✅ Note saved successfully!");
     } catch (err) {
       console.error("Error saving note:", err);
-      alert("Failed to save note");
+      alert("❌ Failed to save note");
     }
   };
 
   const handleDelete = () => {
     if (local?.id) onDelete?.(local.id);
   };
+
+  const handleCreateFolder = async () => {
+  try {
+    const res = await fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ name: newFolderName }),
+    });
+
+    const result = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const message = result?.message || "Failed to create folder";
+      throw new Error(message);
+    }
+
+    onFolderCreated?.(result.data);
+    setIsDialogOpen(false);
+    setNewFolderName("");
+    alert("Folder created successfully!");
+  } catch (err: any) {
+    console.error("Error creating folder:", err);
+    alert(err.message || "Something went wrong");
+  }
+};
+
 
   if (!local) {
     return (
@@ -129,8 +171,15 @@ export default function NoteEditor({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
+                onClick={() => setIsDialogOpen(true)}
+                className="focus:text-blue-600"
+              >
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Folder
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={handleDelete}
-                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                className="focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -206,6 +255,33 @@ export default function NoteEditor({
           />
         </Suspense>
       </div>
+
+      {/* Dialog: New Folder */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Label htmlFor="folderName">Folder name</Label>
+            <Input
+              id="folderName"
+              placeholder="e.g. Work Notes"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFolder} disabled={loading}>
+              {loading ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -103,7 +103,6 @@ export default function NoteApp() {
     fetchFolders();
   }, [session]);
 
-  // 🔹 Delete note (guest & login)
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this note?")) return;
 
@@ -128,7 +127,6 @@ export default function NoteApp() {
     }
   };
 
-  // 🔹 Create note
   function handleCreateNote() {
     const newNote: Note = {
       id: crypto.randomUUID(),
@@ -139,7 +137,6 @@ export default function NoteApp() {
     };
 
     if (!session) {
-      // Guest mode — simpan lokal
       const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
       const updated = [newNote, ...guestNotes];
       localStorage.setItem("guestNotes", JSON.stringify(updated));
@@ -149,7 +146,6 @@ export default function NoteApp() {
       return;
     }
 
-    // User login — simpan ke server
     const saveToApi = async () => {
       try {
         const res = await fetch("/api/notes", {
