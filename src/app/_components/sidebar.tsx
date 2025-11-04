@@ -8,7 +8,6 @@ import {
   Archive,
   FilePlus2,
   Folder,
-  PlusIcon,
   Search,
   Star,
   Trash2,
