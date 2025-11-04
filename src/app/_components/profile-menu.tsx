@@ -22,12 +22,19 @@ export default function ProfileMenu() {
     async function fetchUser() {
       try {
         const {
-          data: { user },
+          data: { session },
           error,
-        } = await supabase.auth.getUser();
+        } = await supabase.auth.getSession();
 
         if (error) throw error;
-        setUserEmail(user?.email ?? null);
+
+        if (!session) {
+          console.warn("No session found, user not logged in yet");
+          setUserEmail(null);
+          return;
+        }
+
+        setUserEmail(session.user?.email ?? null);
       } catch (err) {
         console.error("Failed to fetch user:", err);
         setUserEmail(null);
@@ -39,7 +46,7 @@ export default function ProfileMenu() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("🔄 Auth state changed:", _event, session);
+      console.log("Auth state changed:", _event, session);
       setUserEmail(session?.user?.email ?? null);
     });
 
@@ -58,9 +65,7 @@ export default function ProfileMenu() {
   }
 
   const label = userEmail ?? "Guest";
-  const initials = userEmail
-    ? userEmail.slice(0, 2).toUpperCase()
-    : "GU";
+  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : "GU";
 
   return (
     <DropdownMenu>
