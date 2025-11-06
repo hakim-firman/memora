@@ -8,4 +8,5 @@ export type Note = {
   folder: number | null;
   is_favorite: boolean;
   is_archived: boolean;
+  deleted_at: string | null;
 };
