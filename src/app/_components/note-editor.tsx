@@ -9,6 +9,8 @@ import {
   FolderIcon,
   Star,
   Archive,
+  Undo2,
+  XCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,6 +26,7 @@ import {
   SelectValue,
   SelectGroup,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Note } from "@/lib/data/types";
 
@@ -34,7 +37,10 @@ type Props = {
   onChange?: (note: Note) => void;
   onSave?: (note: Note) => void;
   onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
+  onPermanentDelete?: (id: string) => void;
   folders?: { id: number; name: string }[];
+  selectedFolderId?: string | number | null;
 };
 
 export default function NoteEditor({
@@ -42,7 +48,10 @@ export default function NoteEditor({
   onChange,
   onSave,
   onDelete,
+  onRestore,
+  onPermanentDelete,
   folders = [],
+  selectedFolderId,
 }: Props) {
   const [local, setLocal] = useState<Note | null>(note ? { ...note } : null);
 
@@ -97,29 +106,19 @@ export default function NoteEditor({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!local?.id) return;
+    onDelete?.(local.id);
+  };
 
-    try {
-      const res = await fetch(`/api/notes?id=${local.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+  const handleRestore = () => {
+    if (!local?.id) return;
+    onRestore?.(local.id);
+  };
 
-      if (!res.ok) throw new Error("Failed to delete note");
-
-      onDelete?.(local.id);
-      toast("Note deleted", {
-        description: "The note has been permanently deleted.",
-        action: {
-          label: "Undo",
-          onClick: () => console.log("Undo delete"),
-        },
-      });
-    } catch (err) {
-      console.error("Error deleting note:", err);
-      toast.error("Failed to delete note");
-    }
+  const handlePermanentDelete = () => {
+    if (!local?.id) return;
+    onPermanentDelete?.(local.id);
   };
 
   const toggleFavorite = async () => {
@@ -202,36 +201,60 @@ export default function NoteEditor({
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="More options"
-                className="p-2 rounded-md hover:bg-accent/50"
+                className="p-2 rounded-md hover:bg-accent/50 transition-colors"
               >
                 <MoreVertical className="h-5 w-5" />
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={toggleFavorite}>
-                <Star
-                  className={`mr-2 h-4 w-4 ${
-                    local.is_favorite ? "text-yellow-500 fill-yellow-500" : ""
-                  }`}
-                />
-                {local.is_favorite ? "Unfavorite" : "Add to Favorites"}
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-56">
+              {local.deleted_at ? (
+                <>
+                  <DropdownMenuItem onClick={handleRestore}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Restore Note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handlePermanentDelete}
+                    className="focus:text-destructive text-destructive"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Delete Permanently
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={toggleFavorite}>
+                    <Star
+                      className={`mr-2 h-4 w-4 ${
+                        local.is_favorite
+                          ? "text-yellow-500 fill-yellow-500"
+                          : ""
+                      }`}
+                    />
+                    {local.is_favorite ? "Unfavorite" : "Add to Favorites"}
+                  </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={toggleArchive}>
-                <Archive
-                  className="mr-2 h-4 w-4"
-                />
-                {local.is_archived ? "Unarchive" : "Move to Archive"}
-              </DropdownMenuItem>
+                  <DropdownMenuItem onClick={toggleArchive}>
+                    <Archive
+                      className={`mr-2 h-4 w-4 ${
+                        local.is_archived ? "text-primary fill-primary" : ""
+                      }`}
+                    />
+                    {local.is_archived ? "Unarchive Note" : "Move to Archive"}
+                  </DropdownMenuItem>
 
-              <DropdownMenuItem
-                onClick={handleDelete}
-                className="focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+                  {/* Optional separator */}
+                  <div className="my-1 border-t border-border" />
+
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="focus:text-destructive text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Move to Trash
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

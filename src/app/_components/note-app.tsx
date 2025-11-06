@@ -111,26 +111,99 @@ export default function NoteApp() {
     fetchFolders();
   }, [session]);
 
+  // Soft delete: pindah ke Trash
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this note?")) return;
+    if (!confirm("Pindahkan catatan ini ke Trash?")) return;
 
+    // === Guest Mode ===
+    if (!session) {
+      const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+      const updated = guestNotes.map((n: Note) =>
+        n.id === id ? { ...n, deleted_at: new Date().toISOString() } : n
+      );
+      localStorage.setItem("guestNotes", JSON.stringify(updated));
+      setNotes(updated);
+      return;
+    }
+
+    // === Logged-in Mode ===
+    try {
+      const res = await fetch(`/api/notes?id=${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+      });
+
+      if (!res.ok) throw new Error("Failed to move note to Trash");
+      const { data } = await res.json();
+
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, ...data } : n))
+      );
+    } catch (err) {
+      console.error("Error deleting note:", err);
+      alert("Gagal memindahkan catatan ke Trash");
+    }
+  };
+
+  // Restore dari Trash
+  const handleRestore = async (id: string) => {
+    // === Guest Mode ===
+    if (!session) {
+      const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+      const updated = guestNotes.map((n: Note) =>
+        n.id === id ? { ...n, deleted_at: null } : n
+      );
+      localStorage.setItem("guestNotes", JSON.stringify(updated));
+      setNotes(updated);
+      return;
+    }
+
+    // === Logged-in Mode ===
+    try {
+      const res = await fetch(`/api/notes?id=${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleted_at: null }),
+      });
+
+      if (!res.ok) throw new Error("Failed to restore note");
+      const { data } = await res.json();
+
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, ...data } : n))
+      );
+    } catch (err) {
+      console.error("Error restoring note:", err);
+      alert("Gagal memulihkan catatan");
+    }
+  };
+
+  // Permanent delete: hapus sepenuhnya
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm("Hapus catatan ini secara permanen?")) return;
+
+    // === Guest Mode ===
     if (!session) {
       const guestNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
       const updated = guestNotes.filter((n: Note) => n.id !== id);
       localStorage.setItem("guestNotes", JSON.stringify(updated));
       setNotes(updated);
-      setSelectedId(null);
       return;
     }
+    
+    setNotes((prev) => prev.filter((n) => n.id !== id));
 
+    // === Logged-in Mode ===
     try {
-      const res = await fetch(`/api/notes?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`Failed to delete note: ${res.status}`);
+      const res = await fetch(`/api/notes?id=${id}&permanent=true`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to permanently delete note");
+
       setNotes((prev) => prev.filter((n) => n.id !== id));
-      if (selectedId === id) setSelectedId(null);
     } catch (err) {
-      console.error("Error deleting note:", err);
-      alert("Failed to delete note");
+      console.error("Error permanently deleting note:", err);
+      alert("Gagal menghapus catatan secara permanen");
+      await fetch("/api/notes");
     }
   };
 
@@ -143,7 +216,7 @@ export default function NoteApp() {
       date: undefined,
       is_favorite: false,
       is_archived: false,
-      // is_deleted: false,
+      deleted_at: null,
     };
 
     if (!session) {
@@ -184,10 +257,12 @@ export default function NoteApp() {
 
   const filteredNotes = notes.filter((note) => {
     if (selectedFolderId === null) return true;
-    if (selectedFolderId === "favorites") return note.is_favorite === true;
-    if (selectedFolderId === "archived") return note.is_archived === true;
-    // if (selectedFolderId === "trash") return note.is_deleted === true;
-    return note.folder === selectedFolderId;
+    if (selectedFolderId === "favorites")
+      return note.is_favorite === true && !note.deleted_at;
+    if (selectedFolderId === "archived")
+      return note.is_archived === true && !note.deleted_at;
+    if (selectedFolderId === "trash") return note.deleted_at;
+    return !note.deleted_at && note.folder === selectedFolderId;
   });
 
   const selectedNote = useMemo(() => {
@@ -231,6 +306,8 @@ export default function NoteApp() {
             }}
             folders={folders}
             onDelete={handleDelete}
+            onRestore={handleRestore}
+            onPermanentDelete={handlePermanentDelete}
           />
 
           {!session && (
