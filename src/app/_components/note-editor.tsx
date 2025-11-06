@@ -1,13 +1,16 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { Suspense, lazy, useMemo, useState } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import {
   MoreVertical,
   Trash2,
   CalendarDays,
   FolderIcon,
-  FolderPlus,
+  Star,
+  Archive,
+  Undo2,
+  XCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,23 +18,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
 } from "@/components/ui/select";
-import { SelectGroup } from "@radix-ui/react-select";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import type { Note } from "@/lib/data/types";
 
 const DynamicTipTapEditor = lazy(() => import("./tiptap-editor"));
@@ -41,8 +37,10 @@ type Props = {
   onChange?: (note: Note) => void;
   onSave?: (note: Note) => void;
   onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
+  onPermanentDelete?: (id: string) => void;
   folders?: { id: number; name: string }[];
-  onFolderCreated?: (folder: { id: number; name: string }) => void;
+  selectedFolderId?: string | number | null;
 };
 
 export default function NoteEditor({
@@ -50,26 +48,23 @@ export default function NoteEditor({
   onChange,
   onSave,
   onDelete,
+  onRestore,
+  onPermanentDelete,
   folders = [],
-  onFolderCreated,
+  selectedFolderId,
 }: Props) {
   const [local, setLocal] = useState<Note | null>(note ? { ...note } : null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  if (note && local?.id !== note.id) {
-    setLocal({ ...note });
-  }
+  if (note && local?.id !== note.id) setLocal({ ...note });
 
   const disabled = useMemo(() => !local?.title, [local]);
 
-  function update<K extends keyof Note>(key: K, value: Note[K]) {
+  const update = <K extends keyof Note>(key: K, value: Note[K]) => {
     if (!local) return;
     const next = { ...local, [key]: value };
     setLocal(next);
     onChange?.(next);
-  }
+  };
 
   const handleContentChange = (html: string) => {
     if (!local) return;
@@ -97,60 +92,102 @@ export default function NoteEditor({
         }
       );
 
-      if (!res.ok) throw new Error(`Failed to save note: ${res.status}`);
+      if (!res.ok) throw new Error("Failed to save note");
 
       const data = await res.json();
       onSave?.(data.data);
-      alert("Note saved successfully!");
+
+      toast.success("Note saved successfully!", {
+        description: new Date().toLocaleString(),
+      });
     } catch (err) {
       console.error("Error saving note:", err);
-      alert("Failed to save note");
+      toast.error("Failed to save note");
     }
   };
 
   const handleDelete = () => {
-    if (local?.id) onDelete?.(local.id);
+    if (!local?.id) return;
+    onDelete?.(local.id);
   };
 
-  const handleCreateFolder = async () => {
-  try {
-    const res = await fetch("/api/folders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ name: newFolderName }),
-    });
+  const handleRestore = () => {
+    if (!local?.id) return;
+    onRestore?.(local.id);
+  };
 
-    const result = await res.json().catch(() => ({}));
+  const handlePermanentDelete = () => {
+    if (!local?.id) return;
+    onPermanentDelete?.(local.id);
+  };
 
-    if (!res.ok) {
-      const message = result?.message || "Failed to create folder";
-      throw new Error(message);
+  const toggleFavorite = async () => {
+    if (!local?.id) return;
+    try {
+      const res = await fetch(`/api/notes?id=${local.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...local, is_favorite: !local.is_favorite }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update favorite");
+      const data = await res.json();
+
+      setLocal(data.data);
+      onSave?.(data.data);
+
+      toast(
+        local.is_favorite ? "Removed from favorites" : "Added to favorites",
+        {
+          description: local.is_favorite
+            ? "This note was removed from your favorites."
+            : "This note is now marked as favorite.",
+        }
+      );
+    } catch (err) {
+      console.error("Error updating favorite:", err);
+      toast.error("Failed to update favorite status");
     }
+  };
 
-    onFolderCreated?.(result.data);
-    setIsDialogOpen(false);
-    setNewFolderName("");
-    alert("Folder created successfully!");
-  } catch (err: unknown) {
-    console.error("Error creating folder:", err);
-    alert("Failed to create folder");}
-};
+  const toggleArchive = async () => {
+    if (!local?.id) return;
+    try {
+      const res = await fetch(`/api/notes?id=${local.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...local, is_archived: !local.is_archived }),
+      });
 
+      if (!res.ok) throw new Error("Failed to update archive");
+      const data = await res.json();
 
-  if (!local) {
+      setLocal(data.data);
+      onSave?.(data.data);
+
+      toast(local.is_archived ? "Removed from archives" : "Added to archives", {
+        description: local.is_archived
+          ? "This note was removed from your archives."
+          : "This note is now marked as archived.",
+      });
+    } catch (err) {
+      console.error("Error updating archive:", err);
+      toast.error("Failed to update archive status");
+    }
+  };
+
+  if (!local)
     return (
-      <div className="h-full grid place-items-center">
-        <div className="text-center text-muted-foreground">
-          Select or create a note to start writing.
-        </div>
+      <div className="h-full grid place-items-center text-muted-foreground">
+        Select or create a note to start writing.
       </div>
     );
-  }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Title Bar */}
+      {/* Header */}
       <div className="px-6 py-5 border-b border-border">
         <div className="flex items-start justify-between gap-4">
           <Input
@@ -159,40 +196,73 @@ export default function NoteEditor({
             className="bg-transparent text-2xl md:text-3xl font-semibold border-none focus-visible:ring-0 px-0"
             aria-label="Note title"
           />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="More options"
-                className="p-2 rounded-md hover:bg-accent/50"
+                className="p-2 rounded-md hover:bg-accent/50 transition-colors"
               >
                 <MoreVertical className="h-5 w-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setIsDialogOpen(true)}
-                className="focus:text-blue-600"
-              >
-                <FolderPlus className="mr-2 h-4 w-4" />
-                New Folder
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleDelete}
-                className="focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+
+            <DropdownMenuContent align="end" className="w-56">
+              {local.deleted_at ? (
+                <>
+                  <DropdownMenuItem onClick={handleRestore}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Restore Note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handlePermanentDelete}
+                    className="focus:text-destructive text-destructive"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Delete Permanently
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={toggleFavorite}>
+                    <Star
+                      className={`mr-2 h-4 w-4 ${
+                        local.is_favorite
+                          ? "text-yellow-500 fill-yellow-500"
+                          : ""
+                      }`}
+                    />
+                    {local.is_favorite ? "Unfavorite" : "Add to Favorites"}
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem onClick={toggleArchive}>
+                    <Archive
+                      className={`mr-2 h-4 w-4 ${
+                        local.is_archived ? "text-primary fill-primary" : ""
+                      }`}
+                    />
+                    {local.is_archived ? "Unarchive Note" : "Move to Archive"}
+                  </DropdownMenuItem>
+
+                  {/* Optional separator */}
+                  <div className="my-1 border-t border-border" />
+
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="focus:text-destructive text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Move to Trash
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Info Bar */}
+        {/* Meta Info */}
         <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-muted-foreground">
-          {/* Editable Date */}
           <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Date</span>
+            <CalendarDays className="h-4 w-4" />
             <input
               type="date"
               value={
@@ -200,35 +270,28 @@ export default function NoteEditor({
                   ? new Date(local.created_at).toISOString().split("T")[0]
                   : ""
               }
-              onChange={(e) => {
-                const isoDate = new Date(e.target.value).toISOString();
-                update("created_at", isoDate);
-              }}
+              onChange={(e) =>
+                update("created_at", new Date(e.target.value).toISOString())
+              }
               className="ml-2 bg-secondary border border-border rounded-md px-2 py-1"
               aria-label="Select date"
             />
           </div>
 
-          {/* Folder Select */}
           <div className="flex items-center gap-1.5">
-            <FolderIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Folder</span>
-
+            <FolderIcon className="h-4 w-4" />
             <Select
               value={local.folder ? String(local.folder) : ""}
-              onValueChange={(value) => update("folder", Number(value))}
+              onValueChange={(v) => update("folder", Number(v))}
             >
               <SelectTrigger className="w-[160px] bg-secondary border border-border rounded-md px-2 py-1">
                 <SelectValue placeholder="Select folder" />
               </SelectTrigger>
-
               <SelectContent align="start">
                 <SelectGroup>
                   {folders.map((f) => (
                     <SelectItem key={f.id} value={String(f.id)}>
-                      <div className="relative flex items-center justify-between w-full">
-                        <span>{f.name}</span>
-                      </div>
+                      {f.name}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -238,8 +301,8 @@ export default function NoteEditor({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+      {/* Editor */}
+      <div className="flex-1 overflow-y-auto px-6 py-6">
         <Suspense
           fallback={
             <div className="p-4 text-center text-muted-foreground">
@@ -254,33 +317,6 @@ export default function NoteEditor({
           />
         </Suspense>
       </div>
-
-      {/* Dialog: New Folder */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Label htmlFor="folderName">Folder name</Label>
-            <Input
-              id="folderName"
-              placeholder="e.g. Work Notes"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFolder} disabled={loading}>
-              {loading ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { title, content, folder } = body;
+    const { title, content, folder, is_favorite, is_archived, deleted_at } = body;
 
     const { data, error } = await supabase
       .from("notes")
@@ -106,6 +106,9 @@ export async function PUT(request: Request) {
         title,
         content,
         folder: folder || null,
+        is_favorite: is_favorite ?? false,
+        is_archived: is_archived ?? false,
+        deleted_at: deleted_at ?? null,
       })
       .eq("id", id)
       .eq("created_by", user.id)
@@ -132,29 +135,46 @@ export async function DELETE(request: Request) {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) {
+  if (userError || !user)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
 
   try {
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
-    if (!id) {
+    const permanent = url.searchParams.get("permanent") === "true";
+
+    if (!id)
       return NextResponse.json({ error: "Note ID is required" }, { status: 400 });
+
+    if (permanent) {
+      // Hapus permanen
+      const { error } = await supabase
+        .from("notes")
+        .delete()
+        .eq("id", id)
+        .eq("created_by", user.id);
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        message: "Note permanently deleted",
+        status: 200,
+      });
+    } else {
+      // Soft delete (move to Trash)
+      const { error } = await supabase
+        .from("notes")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("created_by", user.id);
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        message: "Note moved to Trash",
+        status: 200,
+      });
     }
-
-    const { error } = await supabase
-      .from("notes")
-      .delete()
-      .eq("id", id)
-      .eq("created_by", user.id);
-
-    if (error) throw error;
-
-    return NextResponse.json({
-      message: "Note deleted successfully",
-      status: 200,
-    });
   } catch (err: any) {
     console.error("Error deleting note:", err);
     return NextResponse.json(
@@ -163,3 +183,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

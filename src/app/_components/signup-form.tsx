@@ -31,7 +31,6 @@ export default function SignupForm() {
 
       const supabase = createClient();
 
-      // Buat akun baru
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
