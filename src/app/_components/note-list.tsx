@@ -1,22 +1,44 @@
 "use client";
 
 import type { Note } from "@/lib/data/types";
-import { cn, stripHtml } from "@/lib/utils"; 
+import { cn, stripHtml } from "@/lib/utils";
 
 export default function NoteList({
   notes,
   selectedId,
   onSelectNote,
+  getFolderName,
+  selectedFolderId,
 }: {
   notes: Note[];
   selectedId: string | null;
   onSelectNote: (id: string) => void;
-  getFolderName?: (id: number | null) => string;
+  getFolderName?: (id: number | null | string) => string | null;
+  selectedFolderId: string | number | null;
 }) {
+  let folderLabel: string;
+
+  if (
+    selectedFolderId === null ||
+    selectedFolderId === undefined ||
+    selectedFolderId === "all"
+  ) {
+    folderLabel = "All Notes";
+  } else if (
+    typeof selectedFolderId === "string" &&
+    ["favorites", "archived", "trash"].includes(selectedFolderId)
+  ) {
+    folderLabel =
+      selectedFolderId.charAt(0).toUpperCase() + selectedFolderId.slice(1);
+  } else {
+    const name = getFolderName?.(Number(selectedFolderId));
+    folderLabel = name || "Notes";
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 text-base font-semibold border-b border-border">
-        Notes
+        {folderLabel}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -36,7 +58,7 @@ export default function NoteList({
                   "ring-2 ring-sidebar-primary bg-sidebar-primary/10 border-sidebar-primary"
               )}
             >
-               <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {n.created_at
                   ? new Date(n.created_at).toLocaleDateString()
                   : "No date"}
@@ -47,7 +69,7 @@ export default function NoteList({
               </div>
 
               <div className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                {stripHtml(n.excerpt || n.content || "")} 
+                {stripHtml(n.excerpt || n.content || "")}
               </div>
             </button>
           ))

@@ -19,7 +19,9 @@ export default function NoteApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<
+    number | string | null
+  >(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const getFolderNameById = (id: number | null): string => {
@@ -49,7 +51,9 @@ export default function NoteApp() {
   useEffect(() => {
     const fetchNotes = async () => {
       if (!session) {
-        const localNotes = JSON.parse(localStorage.getItem("guestNotes") || "[]");
+        const localNotes = JSON.parse(
+          localStorage.getItem("guestNotes") || "[]"
+        );
         setNotes(localNotes);
         return;
       }
@@ -58,10 +62,12 @@ export default function NoteApp() {
         const res = await fetch("/api/notes");
         if (!res.ok) throw new Error("Failed to fetch notes");
         const data = await res.json();
-        const noteList: Note[] = (data.data || []).map((n: { folder: null; }) => ({
-          ...n,
-          folder: n.folder !== null ? Number(n.folder) : null,
-        }));
+        const noteList: Note[] = (data.data || []).map(
+          (n: { folder: null }) => ({
+            ...n,
+            folder: n.folder !== null ? Number(n.folder) : null,
+          })
+        );
         setNotes(noteList);
       } catch (err) {
         console.error("Error loading notes:", err);
@@ -71,7 +77,7 @@ export default function NoteApp() {
 
     const fetchFolders = async () => {
       if (!session) {
-        setFolders([{ id: 0, name: "Local" }]); 
+        setFolders([{ id: 0, name: "Local" }]);
         return;
       }
 
@@ -79,10 +85,12 @@ export default function NoteApp() {
         const res = await fetch("/api/folders");
         if (!res.ok) throw new Error("Failed to fetch folders");
         const data = await res.json();
-        const folderList: Folder[] = (data.data || []).map((f: { id: any; name: any; }) => ({
-          id: Number(f.id),
-          name: f.name,
-        }));
+        const folderList: Folder[] = (data.data || []).map(
+          (f: { id: any; name: any }) => ({
+            id: Number(f.id),
+            name: f.name,
+          })
+        );
         setFolders(folderList);
       } catch (err) {
         console.error("Error loading folders:", err);
@@ -124,6 +132,9 @@ export default function NoteApp() {
       content: "",
       folder: selectedFolderId,
       date: undefined,
+      is_favorite: false,
+      // is_deleted: false,
+      // is_archived: false,
     };
 
     if (!session) {
@@ -162,10 +173,13 @@ export default function NoteApp() {
     saveToApi();
   }
 
-  // 🔹 Filter dan memoize note
-  const filteredNotes = notes.filter((note) =>
-    selectedFolderId === null ? true : note.folder === selectedFolderId
-  );
+  const filteredNotes = notes.filter((note) => {
+    if (selectedFolderId === null) return true;
+    if (selectedFolderId === "favorites") return note.is_favorite === true;
+    // if (selectedFolderId === "trash") return note.is_deleted === true;
+    // if (selectedFolderId === "archived") return note.is_archived === true;
+    return note.folder === selectedFolderId;
+  });
 
   const selectedNote = useMemo(() => {
     if (selectedId === null) return null;
@@ -178,7 +192,7 @@ export default function NoteApp() {
         <Sidebar
           folders={folders}
           selectedFolderId={selectedFolderId}
-          onSelectFolder={setSelectedFolderId}
+          onSelectFolder={(id) => setSelectedFolderId(id)}
           onNewNote={handleCreateNote}
           recents={notes.slice(0, 5)}
           selectedId={selectedId}
@@ -191,6 +205,7 @@ export default function NoteApp() {
             notes={filteredNotes}
             selectedId={selectedId}
             onSelectNote={setSelectedId}
+            selectedFolderId={selectedFolderId}
             getFolderName={getFolderNameById}
           />
         </section>
@@ -211,7 +226,8 @@ export default function NoteApp() {
 
           {!session && (
             <div className="p-3 text-sm text-muted-foreground border-t border-border bg-muted/30 text-center">
-              Kamu sedang dalam mode tamu. Login untuk menyimpan catatan ke cloud.
+              Kamu sedang dalam mode tamu. Login untuk menyimpan catatan ke
+              cloud.
             </div>
           )}
         </section>
