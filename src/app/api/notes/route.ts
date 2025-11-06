@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { title, content, folder, is_favorite } = body;
+    const { title, content, folder, is_favorite, is_archived} = body;
 
     const { data, error } = await supabase
       .from("notes")
@@ -107,6 +107,7 @@ export async function PUT(request: Request) {
         content,
         folder: folder || null,
         is_favorite: is_favorite ?? false,
+        is_archived: is_archived ?? false
       })
       .eq("id", id)
       .eq("created_by", user.id)

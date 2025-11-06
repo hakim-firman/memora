@@ -227,23 +227,6 @@ export default function Sidebar({
             </Button>
           </li>
 
-          {/* Trash */}
-          <li>
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors",
-                "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                selectedFolderId === "trash" &&
-                  "bg-sidebar-primary/20 border border-sidebar-primary"
-              )}
-              onClick={() => onSelectFolder("trash")}
-            >
-              <Trash2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Trash</span>
-            </Button>
-          </li>
-
           {/* Archived */}
           <li>
             <Button
@@ -258,6 +241,23 @@ export default function Sidebar({
             >
               <Archive className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Archived Notes</span>
+            </Button>
+          </li>
+
+          {/* Trash */}
+          <li>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors",
+                "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                selectedFolderId === "trash" &&
+                  "bg-sidebar-primary/20 border border-sidebar-primary"
+              )}
+              onClick={() => onSelectFolder("trash")}
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Trash</span>
             </Button>
           </li>
         </ul>
