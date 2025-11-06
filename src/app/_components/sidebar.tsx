@@ -22,8 +22,8 @@ import ProfileMenu from "./profile-menu";
 
 type Props = {
   folders: { id: number; name: string }[];
-  selectedFolderId: number | null;
-  onSelectFolder: (id: number | null) => void;
+  selectedFolderId: number | string | null;
+  onSelectFolder: (id: number | string | null) => void;
   onNewNote: () => void;
   recents: Note[];
   selectedId: string | null;
@@ -156,7 +156,11 @@ export default function Sidebar({
             <Button size="icon" variant="ghost" onClick={handleCreateFolder}>
               <Check className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => setCreating(false)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setCreating(false)}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -206,21 +210,53 @@ export default function Sidebar({
           More
         </div>
         <ul className="px-2 space-y-1 pb-4">
+          {/* Favorites */}
           <li>
-            <Button variant="ghost" className="w-full justify-start flex items-center gap-2 px-2.5 py-2 hover:bg-sidebar-accent/60">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors",
+                "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                selectedFolderId === "favorites" &&
+                  "bg-sidebar-primary/20 border border-sidebar-primary"
+              )}
+              onClick={() => onSelectFolder("favorites")}
+            >
               <Star className="h-4 w-4" />
               <span className="text-sm">Favorites</span>
             </Button>
           </li>
+
+          {/* Trash */}
           <li>
-            <Button variant="ghost" className="w-full justify-start flex items-center gap-2 px-2.5 py-2 hover:bg-sidebar-accent/60">
-              <Trash2 className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors",
+                "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                selectedFolderId === "trash" &&
+                  "bg-sidebar-primary/20 border border-sidebar-primary"
+              )}
+              onClick={() => onSelectFolder("trash")}
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Trash</span>
             </Button>
           </li>
+
+          {/* Archived */}
           <li>
-            <Button variant="ghost" className="w-full justify-start flex items-center gap-2 px-2.5 py-2 hover:bg-sidebar-accent/60">
-              <Archive className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors",
+                "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                selectedFolderId === "archived" &&
+                  "bg-sidebar-primary/20 border border-sidebar-primary"
+              )}
+              onClick={() => onSelectFolder("archived")}
+            >
+              <Archive className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Archived Notes</span>
             </Button>
           </li>
@@ -296,11 +332,13 @@ function FolderItem({
           variant="ghost"
           className={cn(
             "w-full justify-between px-2.5 py-2 rounded-md hover:bg-sidebar-accent/60",
-            isSelected &&
-              "bg-sidebar-primary/20 border border-sidebar-primary"
+            isSelected && "bg-sidebar-primary/20 border border-sidebar-primary"
           )}
         >
-          <span onClick={onSelect} className="flex items-center justify-between w-full">
+          <span
+            onClick={onSelect}
+            className="flex items-center justify-between w-full"
+          >
             <div className="flex items-center gap-2 overflow-hidden">
               <Folder className="h-4 w-4 shrink-0" />
               <span className="text-sm truncate">{folder.name}</span>

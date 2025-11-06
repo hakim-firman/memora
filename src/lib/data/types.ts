@@ -6,4 +6,5 @@ export type Note = {
   excerpt?: string;
   created_at?: string;
   folder: number | null;
+  is_favorite: boolean;
 };
