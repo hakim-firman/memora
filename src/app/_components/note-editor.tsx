@@ -7,7 +7,6 @@ import {
   Trash2,
   CalendarDays,
   FolderIcon,
-  FolderPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,15 +14,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -51,12 +41,8 @@ export default function NoteEditor({
   onSave,
   onDelete,
   folders = [],
-  onFolderCreated,
 }: Props) {
   const [local, setLocal] = useState<Note | null>(note ? { ...note } : null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [loading, setLoading] = useState(false);
 
   if (note && local?.id !== note.id) {
     setLocal({ ...note });
@@ -112,31 +98,6 @@ export default function NoteEditor({
     if (local?.id) onDelete?.(local.id);
   };
 
-  const handleCreateFolder = async () => {
-  try {
-    const res = await fetch("/api/folders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ name: newFolderName }),
-    });
-
-    const result = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      const message = result?.message || "Failed to create folder";
-      throw new Error(message);
-    }
-
-    onFolderCreated?.(result.data);
-    setIsDialogOpen(false);
-    setNewFolderName("");
-    alert("Folder created successfully!");
-  } catch (err: unknown) {
-    console.error("Error creating folder:", err);
-    alert("Failed to create folder");}
-};
-
 
   if (!local) {
     return (
@@ -169,13 +130,6 @@ export default function NoteEditor({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setIsDialogOpen(true)}
-                className="focus:text-blue-600"
-              >
-                <FolderPlus className="mr-2 h-4 w-4" />
-                New Folder
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleDelete}
                 className="focus:text-destructive"
@@ -254,33 +208,6 @@ export default function NoteEditor({
           />
         </Suspense>
       </div>
-
-      {/* Dialog: New Folder */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Label htmlFor="folderName">Folder name</Label>
-            <Input
-              id="folderName"
-              placeholder="e.g. Work Notes"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFolder} disabled={loading}>
-              {loading ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -2,13 +2,27 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error("Error fetching user:", userError);
+  }
+
   try {
-    const { data, error } = await supabase.from("folders").select("*");
+    const { data, error } = await supabase
+      .from("folders")
+      .select("*")
+      .or(`created_by.eq.${user?.id},created_by.is.null`)
+      .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("error", error);
+      console.error("Supabase error:", error);
       return NextResponse.json({ message: error.message }, { status: 500 });
     }
 
@@ -83,6 +97,51 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error("Unexpected error:", err);
+    return NextResponse.json(
+      {
+        message:
+          (err as { message: string }).message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    if (!id) {
+      return NextResponse.json(
+        { error: "Folder ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("folders")
+      .delete()
+      .eq("id", id)
+      .eq("created_by", user.id);
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      message: "Folder deleted successfully",
+      status: 200,
+    });
+  } catch (err: unknown) {
+    console.error("Error deleting folder:", err);
     return NextResponse.json(
       {
         message:
