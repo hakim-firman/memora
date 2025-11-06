@@ -8,6 +8,7 @@ import {
   CalendarDays,
   FolderIcon,
   Star,
+  Archive,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -151,6 +152,33 @@ export default function NoteEditor({
     }
   };
 
+  const toggleArchive = async () => {
+    if (!local?.id) return;
+    try {
+      const res = await fetch(`/api/notes?id=${local.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...local, is_archived: !local.is_archived }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update archive");
+      const data = await res.json();
+
+      setLocal(data.data);
+      onSave?.(data.data);
+
+      toast(local.is_archived ? "Removed from archives" : "Added to archives", {
+        description: local.is_archived
+          ? "This note was removed from your archives."
+          : "This note is now marked as archived.",
+      });
+    } catch (err) {
+      console.error("Error updating archive:", err);
+      toast.error("Failed to update archive status");
+    }
+  };
+
   if (!local)
     return (
       <div className="h-full grid place-items-center text-muted-foreground">
@@ -188,6 +216,13 @@ export default function NoteEditor({
                   }`}
                 />
                 {local.is_favorite ? "Unfavorite" : "Add to Favorites"}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={toggleArchive}>
+                <Archive
+                  className="mr-2 h-4 w-4"
+                />
+                {local.is_archived ? "Unarchive" : "Move to Archive"}
               </DropdownMenuItem>
 
               <DropdownMenuItem

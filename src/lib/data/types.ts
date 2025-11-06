@@ -7,4 +7,5 @@ export type Note = {
   created_at?: string;
   folder: number | null;
   is_favorite: boolean;
+  is_archived: boolean;
 };

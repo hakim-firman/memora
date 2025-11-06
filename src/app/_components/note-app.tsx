@@ -142,8 +142,8 @@ export default function NoteApp() {
       folder: typeof selectedFolderId === "number" ? selectedFolderId : null,
       date: undefined,
       is_favorite: false,
+      is_archived: false,
       // is_deleted: false,
-      // is_archived: false,
     };
 
     if (!session) {
@@ -185,8 +185,8 @@ export default function NoteApp() {
   const filteredNotes = notes.filter((note) => {
     if (selectedFolderId === null) return true;
     if (selectedFolderId === "favorites") return note.is_favorite === true;
+    if (selectedFolderId === "archived") return note.is_archived === true;
     // if (selectedFolderId === "trash") return note.is_deleted === true;
-    // if (selectedFolderId === "archived") return note.is_archived === true;
     return note.folder === selectedFolderId;
   });
 
