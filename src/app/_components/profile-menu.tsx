@@ -46,7 +46,6 @@ export default function ProfileMenu() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event, session);
       setUserEmail(session?.user?.email ?? null);
     });
 
