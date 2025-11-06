@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient();
+export async function PATCH (req: Request, context: { params: Promise<{ id: string }> }) {
+    const { id } = await context.params;
+    const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
@@ -16,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { data, error } = await supabase
     .from("folders")
     .update({ name })
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 

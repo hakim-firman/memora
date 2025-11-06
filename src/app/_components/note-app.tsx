@@ -24,11 +24,20 @@ export default function NoteApp() {
   >(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const getFolderNameById = (id: number | null): string => {
+  function getFolderNameById(id: string | number | null): string | null {
     if (id === null) return "All Notes";
-    const folder = folders.find((f) => f.id === id);
-    return folder ? folder.name : "Uncategorized";
-  };
+
+    if (id === "favorites") return "Favorites";
+    if (id === "archived") return "Archived";
+    if (id === "trash") return "Trash";
+
+    if (typeof id === "number") {
+      const folder = folders.find((f) => f.id === id);
+      return folder ? folder.name : "Uncategorized";
+    }
+
+    return null;
+  }
 
   useEffect(() => {
     const checkSession = async () => {
@@ -130,7 +139,7 @@ export default function NoteApp() {
       id: crypto.randomUUID(),
       title: "Untitled",
       content: "",
-      folder: selectedFolderId,
+      folder: typeof selectedFolderId === "number" ? selectedFolderId : null,
       date: undefined,
       is_favorite: false,
       // is_deleted: false,
